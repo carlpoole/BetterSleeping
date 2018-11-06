@@ -12,10 +12,13 @@ prefix: "§6[BetterSleeping] §3"
 # The message people get when enough people are sleeping
 enough_sleeping: "Enough people are sleeping now!"
 
+# If player names are enabled, this message shows before the amount of players needed
+player_name: "<player> went to sleep."
+
 # The message which indicates how many more people need to rest
 # <amount> will be replaced by the appropriate amount
-amount_left_plural: "There are <amount> more people needed to skip the night/storm!"
-amount_left_single: "Only <amount> more person needs to sleep to skip the night/storm!"
+amount_left_plural: "<amount> more people need to sleep to skip the night/storm!"
+amount_left_single: "<amount> more person needs to sleep to skip the night/storm!"
 
 # The message a player gets when he/she doesn't have access to a command
 no_permission: "§4You don't have permission to execute that command!"

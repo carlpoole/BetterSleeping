@@ -12,75 +12,116 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerBedLeaveEvent;
+import org.bukkit.scheduler.BukkitTask;
+
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Dieter Nuytemans
  */
 public class OnSleepEvent implements Listener, Reloadable {
 
+    private static final int NIGHT = 12516;
+
     private BetterSleeping plugin;
 
+    private HashMap<String, BukkitTask> sleepingPlayerTasks = new HashMap<>();
+
     private int percentNeeded;
-    private int playersSleeping;
+    private AtomicInteger playersSleeping = new AtomicInteger(0);
     private long sleepDelay;
     private String overworldName;
     private FileManagement configFile;
     private FileManagement langFile;
 
     private String prefix;
+    private String player_name;
     private String enough_sleeping;
     private String amount_left_plural;
     private String amount_left_single;
 
     public OnSleepEvent(FileManagement configFile, FileManagement langFile, BetterSleeping plugin) {
         this.plugin = plugin;
-
         this.configFile = configFile;
         this.langFile = langFile;
-
         reload();
     }
 
     @EventHandler
     public void onPlayerEnterBed(PlayerBedEnterEvent e) {
-        playersSleeping++;
-        int numNeeded = playersNeeded();
-
-        if (playersSleeping >= numNeeded) {
-            Bukkit.getServer().getScheduler().runTaskLater(plugin, () -> {
-                if (playersSleeping >= numNeeded) {
-                    for (World world : Bukkit.getWorlds()) {
-                        world.setStorm(false);
-                        world.setTime(1000);
-                    }
-
-                    for (Player p : Bukkit.getOnlinePlayers()) {
-                        p.sendMessage(prefix + enough_sleeping);
-                    }
-                }
-            }, sleepDelay);
-
-        } else {
-            int numLeft = numNeeded - playersSleeping;
-            String msg = "";
-
-            if (numLeft > 1) {
-                msg = amount_left_plural.replaceAll("<amount>", Integer.toString(numLeft));
-            } else if (numLeft > 0) {
-                msg = amount_left_single.replaceAll("<amount>", Integer.toString(numLeft));
-            }
-
-            if (!msg.isEmpty()) {
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    p.sendMessage(prefix + msg);
-                }
-            }
-        }
+        playersSleeping.getAndIncrement();
+        Player sleepingPlayer = e.getPlayer();
+        sleepingPlayerTasks.put(sleepingPlayer.getDisplayName(),
+                Bukkit.getServer().getScheduler().runTaskLater(
+                        plugin, () -> sleepCheck(sleepingPlayer.getDisplayName()), sleepDelay)
+        );
     }
 
     @EventHandler
     public void onPlayerLeaveBed(PlayerBedLeaveEvent e) {
-        playersSleeping--;
+        if (playersSleeping.getAndDecrement() <= 0) {
+            playersSleeping.set(0);
+        }
+        String playerName = e.getPlayer().getDisplayName();
+        sleepingPlayerTasks.get(playerName).cancel();
+        sleepingPlayerTasks.remove(playerName);
+    }
+
+    private boolean isNight() {
+        return Bukkit.getWorld(overworldName).getTime() >= NIGHT;
+    }
+
+    private void sleepCheck(String playerName) {
+        int numNeeded = playersNeeded();
+
+        if (isNight()
+                && sleepingPlayerTasks.containsKey(playerName)
+                && !sleepingPlayerTasks.get(playerName).isCancelled()) {
+
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                p.sendMessage(prefix + "sleeping players: " + playersSleeping.get());
+                p.sendMessage(prefix + "needed players: " + playersNeeded());
+            }
+
+            if (playersSleeping.get() >= numNeeded) {
+                for (BukkitTask sleepTask : sleepingPlayerTasks.values()) {
+                    sleepTask.cancel();
+                }
+                sleepingPlayerTasks.clear();
+                playersSleeping.set(0);
+
+                for (World world : Bukkit.getWorlds()) {
+                    world.setStorm(false);
+                    world.setTime(0);
+                }
+
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    p.sendMessage(prefix + enough_sleeping);
+                }
+            } else {
+                int numLeft = numNeeded - playersSleeping.get();
+                String msg = "";
+
+                if (numLeft > 1) {
+                    msg += amount_left_plural.replaceAll("<amount>", Integer.toString(numLeft));
+                } else if (numLeft > 0) {
+                    msg = amount_left_single.replaceAll("<amount>", Integer.toString(numLeft));
+                }
+
+                if (!msg.isEmpty()) {
+                    msg = player_name.replaceAll("<player>", playerName) + " " + msg;
+
+                    if (isNight() && sleepingPlayerTasks.containsKey(playerName) && !sleepingPlayerTasks.get(playerName).isCancelled()) {
+                        for (Player p : Bukkit.getOnlinePlayers()) {
+                            p.sendMessage(prefix + msg);
+                        }
+                    }
+                }
+            }
+        }
+
+        sleepingPlayerTasks.remove(playerName);
     }
 
     /**
@@ -91,7 +132,7 @@ public class OnSleepEvent implements Listener, Reloadable {
     private int playersNeeded() {
         int numOnline;
 
-        try{
+        try {
             numOnline = Bukkit.getWorld(overworldName).getPlayers().size();
         } catch (NullPointerException e) {
             // If the world wasn't found then just get online player total
@@ -139,6 +180,10 @@ public class OnSleepEvent implements Listener, Reloadable {
         if (langFile.contains("enough_sleeping"))
             enough_sleeping = langFile.getString("enough_sleeping");
         else enough_sleeping = "Enough people are sleeping now!";
+
+        if (langFile.contains("player_name"))
+            player_name = langFile.getString("player_name");
+        else player_name = "<player> went to sleep.";
 
         if (langFile.contains("amount_left_plural"))
             amount_left_plural = langFile.getString("amount_left_plural");
