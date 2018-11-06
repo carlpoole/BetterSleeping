@@ -23,6 +23,7 @@ public class OnSleepEvent implements Listener, Reloadable {
     private int percentNeeded;
     private int playersSleeping;
     private long sleepDelay;
+    private String overworldName;
     private FileManagement configFile;
     private FileManagement langFile;
 
@@ -83,13 +84,20 @@ public class OnSleepEvent implements Listener, Reloadable {
     }
 
     /**
-     * Calculate the amount of players needed according to the settings and current online players
+     * Calculate the amount of players needed according to the settings and current online players in the overworld only
      *
      * @return float
      */
     private int playersNeeded() {
-        // Todo: this needs to only reflect overworld players
-        int numOnline = Bukkit.getOnlinePlayers().size();
+        int numOnline;
+
+        try{
+            numOnline = Bukkit.getWorld(overworldName).getPlayers().size();
+        } catch (NullPointerException e) {
+            // If the world wasn't found then just get online player total
+            numOnline = Bukkit.getOnlinePlayers().size();
+        }
+
         float needed = (percentNeeded * numOnline / 100.0f);
         return (int) Math.ceil(needed);
     }
@@ -117,6 +125,12 @@ public class OnSleepEvent implements Listener, Reloadable {
             else if (percentNeeded < 1) percentNeeded = 1;
 
         } else percentNeeded = 30;
+
+        if (configFile.contains("overworld_name")) {
+            overworldName = configFile.getString("overworld_name");
+        } else {
+            overworldName = "world";
+        }
 
         if (langFile.contains("prefix"))
             prefix = langFile.getString("prefix");

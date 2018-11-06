@@ -10,3 +10,6 @@ percentage_needed: 30
 # as soon as enough people are sleeping.
 # A delay of one second is equal to 20 ticks so setting this to 40 means a delay of two seconds
 sleep_delay: 40
+
+# The world name for the overworld in your server
+overworld_name: "world"
