@@ -30,8 +30,9 @@ public class OnSleepEvent implements Listener, Reloadable {
     
     private String prefix;
     private String enough_sleeping;
-    private String amount_left;
-    
+    private String amount_left_plural;
+    private String amount_left_single;
+
     public OnSleepEvent(FileManagement configFile, FileManagement langFile, BetterSleeping plugin)
     {
         this.plugin = plugin;
@@ -66,10 +67,15 @@ public class OnSleepEvent implements Listener, Reloadable {
                     
         } else {
             float numLeft = numNeeded - playersSleeping;
-            if (numLeft > 0 ) {
-                
-                String msg = amount_left.replaceAll("<amount>", Integer.toString((int) Math.round(numLeft)));
-                
+            String msg = "";
+            
+            if (numLeft > 1 ) {
+                msg = amount_left_plural.replaceAll("<amount>", Integer.toString(Math.round(numLeft)));
+            } else if (numLeft > 0) {
+                msg = amount_left_single.replaceAll("<amount>", Integer.toString(Math.round(numLeft)));
+            }
+
+            if(!msg.isEmpty()){
                 for (Player p : Bukkit.getOnlinePlayers())
                 {
                     p.sendMessage(prefix + msg);
@@ -126,8 +132,12 @@ public class OnSleepEvent implements Listener, Reloadable {
             enough_sleeping = langFile.getString("enough_sleeping");
         else enough_sleeping = "Enough people are sleeping now!";
         
-        if (langFile.contains("amount_left"))
-            amount_left = langFile.getString("amount_left");
-        else amount_left = "There are <amount> more people needed to skip the night/storm!";
+        if (langFile.contains("amount_left_plural"))
+            amount_left_plural = langFile.getString("amount_left_plural");
+        else amount_left_plural = "There are <amount> more people needed to skip the night/storm!";
+
+        if (langFile.contains("amount_left_single"))
+            amount_left_single = langFile.getString("amount_left_single");
+        else amount_left_single = "Only <amount> more person needs to sleep to skip the night/storm!";
     }
 }
