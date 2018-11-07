@@ -60,11 +60,16 @@ public class OnSleepEvent implements Listener, Reloadable {
 
     @EventHandler
     public void onPlayerLeaveBed(PlayerBedLeaveEvent e) {
+        
+        // Stops the count going below zero after morning and everyone leaves bed.
         if (playersSleeping.getAndDecrement() <= 0) {
             playersSleeping.set(0);
         }
+
         String playerName = e.getPlayer().getDisplayName();
-        sleepingPlayerTasks.get(playerName).cancel();
+
+        BukkitTask sleepingPlayerTask = sleepingPlayerTasks.get(playerName);
+        if (sleepingPlayerTask != null) sleepingPlayerTask.cancel();
         sleepingPlayerTasks.remove(playerName);
     }
 
@@ -78,11 +83,6 @@ public class OnSleepEvent implements Listener, Reloadable {
         if (isNight()
                 && sleepingPlayerTasks.containsKey(playerName)
                 && !sleepingPlayerTasks.get(playerName).isCancelled()) {
-
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                p.sendMessage(prefix + "sleeping players: " + playersSleeping.get());
-                p.sendMessage(prefix + "needed players: " + playersNeeded());
-            }
 
             if (playersSleeping.get() >= numNeeded) {
                 for (BukkitTask sleepTask : sleepingPlayerTasks.values()) {
