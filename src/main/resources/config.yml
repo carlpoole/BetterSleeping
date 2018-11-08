@@ -13,3 +13,7 @@ sleep_delay: 40
 
 # The world name for the overworld in your server
 overworld_name: "world"
+
+# Randomize sleep messages
+# This picks a random sleep message from a list in lang.yml
+randomize_sleep_messages: true

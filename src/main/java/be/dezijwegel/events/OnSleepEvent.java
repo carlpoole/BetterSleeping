@@ -14,7 +14,10 @@ import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerBedLeaveEvent;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -25,18 +28,25 @@ public class OnSleepEvent implements Listener, Reloadable {
     private static final int NIGHT = 12516;
 
     private BetterSleeping plugin;
+    private Random randomGenerator = new Random();
+    ;
 
     private HashMap<String, BukkitTask> sleepingPlayerTasks = new HashMap<>();
-
-    private int percentNeeded;
     private AtomicInteger playersSleeping = new AtomicInteger(0);
-    private long sleepDelay;
-    private String overworldName;
+
     private FileManagement configFile;
     private FileManagement langFile;
 
+    // Config options
+    private int percentNeeded;
+    private long sleepDelay;
+    private String overworldName;
+    private boolean randomizedMessages;
+
+    // Language strings
     private String prefix;
     private String player_name;
+    private List<String> randomMessages;
     private String enough_sleeping;
     private String amount_left_plural;
     private String amount_left_single;
@@ -60,7 +70,7 @@ public class OnSleepEvent implements Listener, Reloadable {
 
     @EventHandler
     public void onPlayerLeaveBed(PlayerBedLeaveEvent e) {
-        
+
         // Stops the count going below zero after morning and everyone leaves bed.
         if (playersSleeping.getAndDecrement() <= 0) {
             playersSleeping.set(0);
@@ -84,6 +94,9 @@ public class OnSleepEvent implements Listener, Reloadable {
                 && sleepingPlayerTasks.containsKey(playerName)
                 && !sleepingPlayerTasks.get(playerName).isCancelled()) {
 
+            String sleepMessage = randomizedMessages ? getRandomizedSleepmessage(playerName)
+                    : player_name.replaceAll("<player>", playerName);
+
             if (playersSleeping.get() >= numNeeded) {
                 for (BukkitTask sleepTask : sleepingPlayerTasks.values()) {
                     sleepTask.cancel();
@@ -95,30 +108,25 @@ public class OnSleepEvent implements Listener, Reloadable {
                     world.setStorm(false);
                     world.setTime(0);
                 }
-
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    p.sendMessage(prefix + enough_sleeping);
-                }
             } else {
                 int numLeft = numNeeded - playersSleeping.get();
-                String msg = "";
+                String remainingMessage = "";
 
                 if (numLeft > 1) {
-                    msg += amount_left_plural.replaceAll("<amount>", Integer.toString(numLeft));
+                    remainingMessage += amount_left_plural.replaceAll("<amount>", Integer.toString(numLeft));
                 } else if (numLeft > 0) {
-                    msg = amount_left_single.replaceAll("<amount>", Integer.toString(numLeft));
+                    remainingMessage = amount_left_single.replaceAll("<amount>", Integer.toString(numLeft));
                 }
 
-                if (!msg.isEmpty()) {
-                    msg = player_name.replaceAll("<player>", playerName) + " " + msg;
+                sleepMessage = sleepMessage + " " + remainingMessage;
 
-                    if (isNight() && sleepingPlayerTasks.containsKey(playerName) && !sleepingPlayerTasks.get(playerName).isCancelled()) {
-                        for (Player p : Bukkit.getOnlinePlayers()) {
-                            p.sendMessage(prefix + msg);
-                        }
-                    }
+                if (!sleepingPlayerTasks.containsKey(playerName)
+                        || sleepingPlayerTasks.get(playerName).isCancelled()) {
+                    return;
                 }
             }
+
+            sendMessageToPlayers(sleepMessage);
         }
 
         sleepingPlayerTasks.remove(playerName);
@@ -143,6 +151,14 @@ public class OnSleepEvent implements Listener, Reloadable {
         return (int) Math.ceil(needed);
     }
 
+    private String getRandomizedSleepmessage(String playerName) {
+        return randomMessages.get(randomGenerator.nextInt(randomMessages.size())).replaceAll("<player>", playerName);
+    }
+
+    private void sendMessageToPlayers(String message) {
+        Bukkit.broadcastMessage(prefix + message);
+    }
+
     /**
      * Reload all config settings from the confg files into this object
      */
@@ -159,18 +175,22 @@ public class OnSleepEvent implements Listener, Reloadable {
         }
 
         if (configFile.contains("percentage_needed")) {
-
             percentNeeded = configFile.getInt("percentage_needed");
 
             if (percentNeeded > 100) percentNeeded = 100;
             else if (percentNeeded < 1) percentNeeded = 1;
-
         } else percentNeeded = 30;
 
         if (configFile.contains("overworld_name")) {
             overworldName = configFile.getString("overworld_name");
         } else {
             overworldName = "world";
+        }
+
+        if (configFile.contains("randomize_sleep_messages")) {
+            randomizedMessages = configFile.getBoolean("randomize_sleep_messages");
+        } else {
+            randomizedMessages = false;
         }
 
         if (langFile.contains("prefix"))
@@ -184,6 +204,13 @@ public class OnSleepEvent implements Listener, Reloadable {
         if (langFile.contains("player_name"))
             player_name = langFile.getString("player_name");
         else player_name = "<player> went to sleep.";
+
+        if (langFile.contains("random_sleep_messages")) {
+            randomMessages = langFile.getStringArray("random_sleep_messages");
+        } else {
+            randomMessages = new ArrayList<>();
+            randomMessages.add("<player> went to sleep.");
+        }
 
         if (langFile.contains("amount_left_plural"))
             amount_left_plural = langFile.getString("amount_left_plural");

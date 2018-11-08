@@ -12,8 +12,26 @@ prefix: "§6[BetterSleeping] §3"
 # The message people get when enough people are sleeping
 enough_sleeping: "Enough people are sleeping now!"
 
-# If player names are enabled, this message shows before the amount of players needed
+# This message shows before the amount of players needed
 player_name: "<player> went to sleep."
+
+# If randomized messages are on, these show as players sleep
+random_sleep_messages: [
+  "<player> is taking a cat nap :3",
+  "<player> is dreaming of pizza!",
+  "<player> is catching butterflies!",
+  "<player> fell asleep waiting for Xisuma to stream...",
+  "<player> is afraid of the dark...",
+  "<player> went for a nap.",
+  "<player> is taking ALL the naps!",
+  "<player> doesn't like phantoms!",
+  "<player> let the bed bugs bite.",
+  "<player> is dreaming about EvilXisuma.",
+  "<player> fell asleep counting sheep.",
+  "<player> nodded off...",
+  "<player> got some shut-eye",
+  "<player> snores."
+]
 
 # The message which indicates how many more people need to rest
 # <amount> will be replaced by the appropriate amount
@@ -25,4 +43,3 @@ no_permission: "§4You don't have permission to execute that command!"
 
 # The message that will be sent to the command sender and console when the reload is complete
 message_reloaded: "Reload complete!"
-

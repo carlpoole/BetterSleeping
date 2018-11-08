@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.util.List;
 
 public class FileManagement {
 
@@ -84,6 +85,24 @@ public class FileManagement {
     public long getLong(String path)
     {
         return configuration.getLong(path);
+    }
+
+    /**
+     * Get a boolean from a file
+     * @param path
+     * @return
+     */
+    public boolean getBoolean(String path) {
+        return configuration.getBoolean(path);
+    }
+
+    /**
+     * Get a String array from the file
+     * @param path
+     * @return
+     */
+    public List<String> getStringArray(String path) {
+        return configuration.getStringList(path);
     }
     
     /**
