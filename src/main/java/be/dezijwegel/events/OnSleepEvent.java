@@ -83,14 +83,15 @@ public class OnSleepEvent implements Listener, Reloadable {
         sleepingPlayerTasks.remove(playerName);
     }
 
-    private boolean isNight() {
-        return Bukkit.getWorld(overworldName).getTime() >= NIGHT;
+    private boolean isNightOrStorming() {
+        World world = Bukkit.getWorld(overworldName);
+        return world.isThundering() || world.getTime() >= NIGHT;
     }
 
     private void sleepCheck(String playerName) {
         int numNeeded = playersNeeded();
 
-        if (isNight()
+        if (isNightOrStorming()
                 && sleepingPlayerTasks.containsKey(playerName)
                 && !sleepingPlayerTasks.get(playerName).isCancelled()) {
 
