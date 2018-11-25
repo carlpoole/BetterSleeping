@@ -60,11 +60,12 @@ public class OnSleepEvent implements Listener, Reloadable {
 
     @EventHandler
     public void onPlayerEnterBed(PlayerBedEnterEvent e) {
-        playersSleeping.getAndIncrement();
         Player sleepingPlayer = e.getPlayer();
         String sleepingPlayerName = sleepingPlayer.getDisplayName();
 
-        if(!sleepingPlayerTasks.containsKey(sleepingPlayerName) && isNightOrStorming()) {
+        // Need to check if player is actually sleeping first or else can get triggered on "Monsters nearby" etc.
+        if(e.getBedEnterResult() == PlayerBedEnterEvent.BedEnterResult.OK && isNightOrStorming()) {
+            playersSleeping.getAndIncrement();
             sleepingPlayerTasks.put(sleepingPlayerName,
                     Bukkit.getServer().getScheduler().runTaskLater(
                             plugin, () -> sleepCheck(sleepingPlayerName), sleepDelay)
