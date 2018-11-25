@@ -62,10 +62,14 @@ public class OnSleepEvent implements Listener, Reloadable {
     public void onPlayerEnterBed(PlayerBedEnterEvent e) {
         playersSleeping.getAndIncrement();
         Player sleepingPlayer = e.getPlayer();
-        sleepingPlayerTasks.put(sleepingPlayer.getDisplayName(),
-                Bukkit.getServer().getScheduler().runTaskLater(
-                        plugin, () -> sleepCheck(sleepingPlayer.getDisplayName()), sleepDelay)
-        );
+        String sleepingPlayerName = sleepingPlayer.getDisplayName();
+
+        if(!sleepingPlayerTasks.containsKey(sleepingPlayerName) && isNightOrStorming()) {
+            sleepingPlayerTasks.put(sleepingPlayerName,
+                    Bukkit.getServer().getScheduler().runTaskLater(
+                            plugin, () -> sleepCheck(sleepingPlayerName), sleepDelay)
+            );
+        }
     }
 
     @EventHandler
