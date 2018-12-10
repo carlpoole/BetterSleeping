@@ -154,7 +154,7 @@ public class OnSleepEvent implements Listener, Reloadable {
         }
 
         float needed = (percentNeeded * numOnline / 100.0f);
-        return (int) Math.ceil(needed);
+        return (int) Math.floor(needed);
     }
 
     private String getRandomizedSleepmessage(String playerName) {
