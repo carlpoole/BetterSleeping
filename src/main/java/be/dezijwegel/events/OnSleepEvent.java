@@ -9,6 +9,7 @@ import org.bukkit.World;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerBedLeaveEvent;
@@ -58,22 +59,22 @@ public class OnSleepEvent implements Listener, Reloadable {
         reload();
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerEnterBed(PlayerBedEnterEvent e) {
         Player sleepingPlayer = e.getPlayer();
         String sleepingPlayerName = sleepingPlayer.getDisplayName();
 
         // Need to check if player is actually sleeping first or else can get triggered on "Monsters nearby" etc.
-        if(e.getBedEnterResult() == PlayerBedEnterEvent.BedEnterResult.OK) {
+        if (e.getBedEnterResult() == PlayerBedEnterEvent.BedEnterResult.OK) {
             playersSleeping.getAndIncrement();
             sleepingPlayerTasks.put(sleepingPlayerName,
                     Bukkit.getServer().getScheduler().runTaskLater(
-                            plugin, () -> sleepCheck(sleepingPlayerName), sleepDelay)
+                            plugin, () -> sleepCheck(sleepingPlayer), sleepDelay)
             );
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerLeaveBed(PlayerBedLeaveEvent e) {
 
         // Stops the count going below zero after morning and everyone leaves bed.
@@ -93,15 +94,16 @@ public class OnSleepEvent implements Listener, Reloadable {
         return world.isThundering() || world.getTime() >= NIGHT;
     }
 
-    private void sleepCheck(String playerName) {
+    private void sleepCheck(Player sleepingPlayer) {
         int numNeeded = playersNeeded();
+        String sleepingPlayerName = sleepingPlayer.getName();
 
         if (isNightOrStorming()
-                && sleepingPlayerTasks.containsKey(playerName)
-                && !sleepingPlayerTasks.get(playerName).isCancelled()) {
+                && sleepingPlayerTasks.containsKey(sleepingPlayerName)
+                && !sleepingPlayerTasks.get(sleepingPlayerName).isCancelled()) {
 
-            String sleepMessage = randomizedMessages ? getRandomizedSleepmessage(playerName)
-                    : player_name.replaceAll("<player>", playerName);
+            String sleepMessage = randomizedMessages ? getRandomizedSleepmessage(sleepingPlayer)
+                    : player_name.replaceAll("<player>", sleepingPlayerName);
 
             if (playersSleeping.get() >= numNeeded) {
                 for (BukkitTask sleepTask : sleepingPlayerTasks.values()) {
@@ -126,8 +128,8 @@ public class OnSleepEvent implements Listener, Reloadable {
 
                 sleepMessage = sleepMessage + " " + remainingMessage;
 
-                if (!sleepingPlayerTasks.containsKey(playerName)
-                        || sleepingPlayerTasks.get(playerName).isCancelled()) {
+                if (!sleepingPlayerTasks.containsKey(sleepingPlayerName)
+                        || sleepingPlayerTasks.get(sleepingPlayerName).isCancelled()) {
                     return;
                 }
             }
@@ -135,7 +137,7 @@ public class OnSleepEvent implements Listener, Reloadable {
             sendMessageToPlayers(sleepMessage);
         }
 
-        sleepingPlayerTasks.remove(playerName);
+        sleepingPlayerTasks.remove(sleepingPlayerName);
     }
 
     /**
@@ -157,8 +159,24 @@ public class OnSleepEvent implements Listener, Reloadable {
         return (int) Math.floor(needed);
     }
 
-    private String getRandomizedSleepmessage(String playerName) {
-        return randomMessages.get(randomGenerator.nextInt(randomMessages.size())).replaceAll("<player>", playerName);
+    private String getRandomizedSleepmessage(Player sleepingPlayer) {
+        String randomMessage = randomMessages.get(randomGenerator.nextInt(randomMessages.size())).replaceAll("<player>", sleepingPlayer.getName());
+
+        if (randomMessage.contains("<otherplayer>")) {
+            List<Player> players = Bukkit.getWorld(overworldName).getPlayers();
+            String randomPlayer;
+
+            players.remove(sleepingPlayer);
+
+            if (players.size() > 0)
+                randomPlayer = players.get(randomGenerator.nextInt(players.size())).getName();
+            else
+                randomPlayer = "themselves";
+
+            return randomMessage.replaceAll("<otherplayer>", randomPlayer);
+        }
+
+        return randomMessage;
     }
 
     private void sendMessageToPlayers(String message) {
